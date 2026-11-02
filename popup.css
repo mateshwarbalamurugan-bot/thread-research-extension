@@ -51,3 +51,38 @@ button:hover { background: #1b342a; }
   border-top: 1px solid #263438;
   padding-top: 14px;
 }
+
+.relationships-section {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #263438;
+}
+
+.relationships-section form {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+
+.relationships-section label {
+  color: #9aadaa;
+  font-size: 12px;
+}
+
+.relationships-section select {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #38534a;
+  border-radius: 5px;
+  background: #14231e;
+  color: #e8f0ed;
+}
+
+.relationships-section button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.relationships-section h2 {
+  margin: 14px 0 8px;
+}
