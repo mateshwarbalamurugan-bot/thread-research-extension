@@ -86,3 +86,63 @@ button:hover { background: #1b342a; }
 .relationships-section h2 {
   margin: 14px 0 8px;
 }
+/* Layout and text overflow fixes */
+body {
+  width: 380px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+main,
+header,
+.finding,
+.relationships-section {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.finding p,
+.source,
+#relationships li,
+#findings li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.project-controls,
+.relationships-section form {
+  min-width: 0;
+}
+
+.project-controls select,
+.project-controls input,
+.relationships-section select {
+  width: 100%;
+  min-width: 0;
+}
+
+button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.actions {
+  flex-wrap: wrap;
+}
+#openGraph {
+  width: 100%;
+  margin-bottom: 10px;
+  display: block;
+}
+
+#clearProject {
+  width: 100%;
+  display: block;
+  margin-top: 8px;
+}
+
+button {
+  box-sizing: border-box;
+  white-space: normal;
+  line-height: 1.4;
+}
