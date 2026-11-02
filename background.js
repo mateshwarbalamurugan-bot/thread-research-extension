@@ -11,14 +11,14 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== MENU_ID || !info.selectionText || !tab) return;
 
-  const result = await chrome.storage.local.get({ findings: [] });
-  const findings = result.findings;
+  const { findings = [] } =
+    await chrome.storage.local.get({ findings: [] });
 
   findings.unshift({
     id: crypto.randomUUID(),
     text: info.selectionText.trim(),
     sourceTitle: tab.title || "Untitled page",
-    sourceUrl: tab.url || "",
+    sourceUrl: tab.url || info.pageUrl || "",
     capturedAt: new Date().toISOString()
   });
 

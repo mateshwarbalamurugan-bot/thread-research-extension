@@ -3,7 +3,7 @@
   "name": "THREAD — Visual Evidence Mapping",
   "version": "0.1.0",
   "description": "Capture and organize web evidence for research.",
-  "permissions": ["storage", "contextMenus"],
+  "permissions": ["storage", "contextMenus", "tabs"],
   "background": {
     "service_worker": "background.js"
   },
