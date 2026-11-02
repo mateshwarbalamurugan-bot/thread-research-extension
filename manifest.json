@@ -5,8 +5,9 @@
   "description": "Capture and organize web evidence for research.",
   "permissions": ["storage", "contextMenus", "tabs"],
   "background": {
-    "service_worker": "background.js"
-  },
+  "service_worker": "background.js",
+  "type": "module"
+},
   "action": {
     "default_popup": "popup.html",
     "default_title": "Open THREAD"

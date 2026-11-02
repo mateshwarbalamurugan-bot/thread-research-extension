@@ -1,6 +1,13 @@
+
+import { ensureWorkspace, addFinding } from "./storage.js";
+
 const MENU_ID = "thread-save-selection";
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
+  await ensureWorkspace();
+
+  await chrome.contextMenus.removeAll();
+
   chrome.contextMenus.create({
     id: MENU_ID,
     title: "Save selection to THREAD",
@@ -9,18 +16,16 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== MENU_ID || !info.selectionText || !tab) return;
+  if (
+    info.menuItemId !== MENU_ID ||
+    !info.selectionText ||
+    !tab
+  ) return;
 
-  const { findings = [] } =
-    await chrome.storage.local.get({ findings: [] });
-
-  findings.unshift({
-    id: crypto.randomUUID(),
+  await addFinding({
     text: info.selectionText.trim(),
     sourceTitle: tab.title || "Untitled page",
     sourceUrl: tab.url || info.pageUrl || "",
     capturedAt: new Date().toISOString()
   });
-
-  await chrome.storage.local.set({ findings });
 });

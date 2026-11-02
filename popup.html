@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -5,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>THREAD</title>
   <link rel="stylesheet" href="popup.css">
-  <script src="popup.js" defer></script>
+  <script type="module" src="popup.js"></script>
 </head>
 <body>
   <header>
@@ -13,14 +14,31 @@
     <h1>THREAD</h1>
     <p>Collect evidence. Connect ideas.</p>
   </header>
+
   <main>
+    <h2>Research projects</h2>
+
+    <div class="project-controls">
+      <select id="projectSelect"></select>
+      <form id="projectForm">
+        <input id="projectName" placeholder="New project name" required>
+        <button type="submit">Create</button>
+      </form>
+    </div>
+
     <div class="section-heading">
       <h2>Saved findings</h2>
       <span id="count">0</span>
     </div>
-    <p id="empty" class="empty">No findings yet. Select text on a webpage, right-click, and choose “Save selection to THREAD”.</p>
+
+    <p id="empty" class="empty">
+      No findings in this project yet.
+    </p>
+
     <ul id="findings" aria-live="polite"></ul>
-    <button id="clear" class="clear-button" type="button">Clear all findings</button>
+    <button id="clear" class="clear-button" type="button">
+      Clear project findings
+    </button>
   </main>
 </body>
 </html>
