@@ -207,3 +207,94 @@ main {
   stroke: #ffffff;
   stroke-width: 3px;
 }
+
+/* Graph navigation toolbar */
+.graph-toolbar {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #14201f;
+  border-bottom: 1px solid #263438;
+  color: #70d9a5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.graph-toolbar div {
+  display: flex;
+  gap: 8px;
+}
+
+.graph-toolbar button {
+  min-width: 36px;
+  padding: 7px 11px;
+  font-size: 14px;
+  letter-spacing: normal;
+}
+
+#graph {
+  touch-action: none;
+  cursor: grab;
+}
+
+#graph.dragging {
+  cursor: grabbing;
+}
+
+#graphViewport {
+  transform-origin: 0 0;
+}
+
+.graph-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#graphSearch {
+  width: 220px;
+  padding: 9px 12px;
+  border: 1px solid #38534a;
+  border-radius: 6px;
+  background: #10191b;
+  color: #e8f0ed;
+  outline: none;
+}
+
+#graphSearch:focus {
+  border-color: #70d9a5;
+}
+
+#graphSearch::placeholder {
+  color: #82938d;
+}
+
+.node {
+  transition: opacity 0.2s ease;
+}
+
+.node.search-match rect {
+  stroke: #ffffff;
+  stroke-width: 4px;
+}
+
+.node.search-dim {
+  opacity: 0.18;
+}
+
+.edge.search-dim,
+.edge-label.search-dim {
+  opacity: 0.12;
+}
+
+.edge.search-match {
+  opacity: 1;
+  stroke-width: 4px;
+}

@@ -5,6 +5,7 @@ const svg = document.querySelector("#graph");
 const empty = document.querySelector("#empty");
 const details = document.querySelector("#details");
 const projectName = document.querySelector("#projectName");
+const searchInput = document.querySelector("#graphSearch");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -234,7 +235,7 @@ function calculateSmartLayout(
   );
 }
 
-// Find a relationship label position that avoids nodes and other labels.
+// Find a relationship label position away from nodes and other labels.
 function findLabelPosition(
   x1,
   y1,
@@ -254,9 +255,7 @@ function findLabelPosition(
   const labelHeight = 24;
 
   const candidates = [];
-
   const offsets = [45, -45, 65, -65, 90, -90, 120, -120, 155, -155];
-
   const points = [0.25, 0.35, 0.45, 0.5, 0.55, 0.65, 0.75];
 
   points.forEach(t => {
@@ -308,11 +307,9 @@ function findLabelPosition(
     let score = Math.abs(candidate.offset) * 0.15;
     score += Math.abs(candidate.t - 0.5) * 20;
 
-    // Penalise labels near the graph boundaries.
     if (left < 15 || right > width - 15) score += 100000;
     if (top < 15 || bottom > height - 15) score += 100000;
 
-    // Check overlap with every finding card.
     positions.forEach(position => {
       const nodeLeft = position.x - 10;
       const nodeRight = position.x + nodeWidth + 10;
@@ -332,7 +329,6 @@ function findLabelPosition(
       score += overlapX * overlapY * 1000;
     });
 
-    // Check overlap with labels already placed.
     placedLabels.forEach(previous => {
       const overlapX = Math.max(
         0,
@@ -363,6 +359,49 @@ function findLabelPosition(
     top: bestPosition.y - labelHeight / 2,
     bottom: bestPosition.y + labelHeight / 2
   };
+}
+
+// Apply live search to the graph.
+function applyGraphSearch(query) {
+  const searchTerm = query.trim().toLowerCase();
+
+  const nodes = [...svg.querySelectorAll(".node")];
+  const edges = [...svg.querySelectorAll(".edge")];
+  const labels = [...svg.querySelectorAll(".edge-label")];
+
+  const matchingIds = new Set();
+
+  nodes.forEach(node => {
+    const matches =
+      searchTerm !== "" &&
+      node.dataset.searchText.includes(searchTerm);
+
+    if (matches) {
+      matchingIds.add(node.dataset.findingId);
+    }
+
+    node.classList.toggle("search-match", matches);
+    node.classList.toggle(
+      "search-dim",
+      searchTerm !== "" && !matches
+    );
+  });
+
+  [...edges, ...labels].forEach(element => {
+    const connected =
+      matchingIds.has(element.dataset.sourceId) ||
+      matchingIds.has(element.dataset.targetId);
+
+    element.classList.toggle(
+      "search-match",
+      searchTerm !== "" && connected
+    );
+
+    element.classList.toggle(
+      "search-dim",
+      searchTerm !== "" && !connected
+    );
+  });
 }
 
 function updateGraphTransform() {
@@ -550,6 +589,9 @@ function renderGraph(findings, relationships) {
       class: "edge"
     });
 
+    path.dataset.sourceId = String(link.sourceId);
+    path.dataset.targetId = String(link.targetId);
+
     graphViewport.append(path);
 
     const labelText = link.type.toUpperCase();
@@ -580,10 +622,13 @@ function renderGraph(findings, relationships) {
     });
 
     label.textContent = labelText;
+    label.dataset.sourceId = String(link.sourceId);
+    label.dataset.targetId = String(link.targetId);
+
     graphViewport.append(label);
   });
 
-  // Draw finding cards above relationship lines and labels.
+  // Draw finding cards.
   findings.forEach(finding => {
     const position = positions.get(finding.id);
 
@@ -593,6 +638,12 @@ function renderGraph(findings, relationships) {
       role: "button",
       "aria-label": finding.text || "Untitled finding"
     });
+
+    group.dataset.findingId = String(finding.id);
+    group.dataset.searchText = (
+      (finding.sourceTitle || "") + " " +
+      (finding.text || "")
+    ).toLowerCase();
 
     const rectangle = svgElement("rect", {
       x: position.x,
@@ -621,6 +672,11 @@ function renderGraph(findings, relationships) {
   });
 
   resetGraphView();
+
+  // Restore search if the user refreshes the graph.
+  if (searchInput) {
+    applyGraphSearch(searchInput.value);
+  }
 }
 
 async function loadGraph() {
@@ -658,4 +714,12 @@ document.querySelector("#refreshButton")
   .addEventListener("click", loadGraph);
 
 setupGraphNavigation();
+
+// Live search.
+if (searchInput) {
+  searchInput.addEventListener("input", event => {
+    applyGraphSearch(event.target.value);
+  });
+}
+
 loadGraph();

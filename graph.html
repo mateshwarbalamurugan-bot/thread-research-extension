@@ -1,0 +1,67 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>THREAD — Knowledge Graph</title>
+  <link rel="stylesheet" href="graph.css">
+  <script type="module" src="graph.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">THREAD / RESEARCH WORKSPACE</p>
+      <h1>Knowledge Graph</h1>
+      <p id="projectName">Loading project...</p>
+    </div>
+    <button id="refreshButton">Refresh graph</button>
+  </header>
+
+  <section class="legend">
+    <span><i class="supports"></i> Supports</span>
+    <span><i class="contradicts"></i> Contradicts</span>
+    <span><i class="related"></i> Related</span>
+  </section>
+
+  <main>
+    <section class="graph-panel">
+
+      
+<div class="graph-toolbar">
+  <span>GRAPH NAVIGATION</span>
+
+  <div class="graph-controls">
+    <input
+      id="graphSearch"
+      type="search"
+      placeholder="Search findings..."
+      aria-label="Search findings"
+    >
+
+    <button id="zoomOut" title="Zoom out">−</button>
+    <button id="zoomIn" title="Zoom in">+</button>
+    <button id="resetView">Reset view</button>
+  </div>
+</div>
+
+
+      <div id="empty" hidden>
+        No findings in this project yet. Capture some evidence first.
+      </div>
+
+      <svg id="graph"
+        role="img"
+        aria-label="Evidence relationship graph">
+      </svg>
+
+    </section>
+
+    <aside id="details">
+      <p class="eyebrow">SELECT A NODE</p>
+      <h2>Finding details</h2>
+      <p>Click any finding in the graph to inspect its evidence.</p>
+    </aside>
+  </main>
+</body>
+</html>
