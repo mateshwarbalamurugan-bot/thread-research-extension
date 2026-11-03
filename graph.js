@@ -8,6 +8,14 @@ const projectName = document.querySelector("#projectName");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+let zoomLevel = 1;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let lastPointerX = 0;
+let lastPointerY = 0;
+let graphViewport = null;
+
 const colors = {
   supports: "#70d9a5",
   contradicts: "#ff7777",
@@ -96,8 +104,97 @@ function addTextLine(group, text, position, index) {
   group.append(line);
 }
 
+function updateGraphTransform() {
+  if (!graphViewport) return;
+
+  graphViewport.setAttribute(
+    "transform",
+    `translate(${panX} ${panY}) scale(${zoomLevel})`
+  );
+}
+
+function resetGraphView() {
+  zoomLevel = 1;
+  panX = 0;
+  panY = 0;
+  updateGraphTransform();
+}
+
+function zoomGraph(factor) {
+  const previousZoom = zoomLevel;
+
+  zoomLevel = Math.max(0.4, Math.min(2.5, zoomLevel * factor));
+
+  const viewBox = svg.viewBox.baseVal;
+  const centerX = viewBox.width / 2;
+  const centerY = viewBox.height / 2;
+
+  const scaleFactor = zoomLevel / previousZoom;
+
+  panX = centerX - (centerX - panX) * scaleFactor;
+  panY = centerY - (centerY - panY) * scaleFactor;
+
+  updateGraphTransform();
+}
+
+function setupGraphNavigation() {
+  document.querySelector("#zoomIn").addEventListener(
+    "click",
+    () => zoomGraph(1.2)
+  );
+
+  document.querySelector("#zoomOut").addEventListener(
+    "click",
+    () => zoomGraph(1 / 1.2)
+  );
+
+  document.querySelector("#resetView").addEventListener(
+    "click",
+    resetGraphView
+  );
+
+  svg.addEventListener("pointerdown", event => {
+    if (event.target.closest(".node")) return;
+
+    isDragging = true;
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+
+    svg.classList.add("dragging");
+    svg.setPointerCapture(event.pointerId);
+  });
+
+  svg.addEventListener("pointermove", event => {
+    if (!isDragging) return;
+
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+
+    const scaleX = viewBox.width / rect.width;
+    const scaleY = viewBox.height / rect.height;
+
+    panX += (event.clientX - lastPointerX) * scaleX;
+    panY += (event.clientY - lastPointerY) * scaleY;
+
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+
+    updateGraphTransform();
+  });
+
+  function stopDragging() {
+    isDragging = false;
+    svg.classList.remove("dragging");
+  }
+
+  svg.addEventListener("pointerup", stopDragging);
+  svg.addEventListener("pointercancel", stopDragging);
+  svg.addEventListener("lostpointercapture", stopDragging);
+}
+
 function renderGraph(findings, relationships) {
   svg.replaceChildren();
+  graphViewport = null;
 
   if (!findings.length) {
     empty.hidden = false;
@@ -127,6 +224,13 @@ function renderGraph(findings, relationships) {
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("height", height);
 
+  // Create one viewport for all graph elements.
+  graphViewport = svgElement("g", {
+    id: "graphViewport"
+  });
+
+  svg.append(graphViewport);
+
   const positions = new Map();
 
   findings.forEach((finding, index) => {
@@ -139,7 +243,7 @@ function renderGraph(findings, relationships) {
     });
   });
 
-  // Group connections by the pair of findings they connect.
+  // Count connections between each pair.
   const pairCounts = new Map();
 
   relationships.forEach(link => {
@@ -149,7 +253,7 @@ function renderGraph(findings, relationships) {
 
   const pairIndexes = new Map();
 
-  // Draw every connection with its own curve and label.
+  // Draw connections and labels.
   relationships.forEach(link => {
     const source = positions.get(link.sourceId);
     const target = positions.get(link.targetId);
@@ -187,7 +291,7 @@ function renderGraph(findings, relationships) {
       class: "edge"
     });
 
-    svg.append(path);
+    graphViewport.append(path);
 
     const label = svgElement("text", {
       x: controlX,
@@ -197,10 +301,10 @@ function renderGraph(findings, relationships) {
     });
 
     label.textContent = link.type.toUpperCase();
-    svg.append(label);
+    graphViewport.append(label);
   });
 
-  // Draw finding nodes above the connections.
+  // Draw finding nodes.
   findings.forEach(finding => {
     const position = positions.get(finding.id);
 
@@ -234,8 +338,10 @@ function renderGraph(findings, relationships) {
       }
     });
 
-    svg.append(group);
+    graphViewport.append(group);
   });
+
+  resetGraphView();
 }
 
 async function loadGraph() {
@@ -268,7 +374,9 @@ async function loadGraph() {
   }
 }
 
+// Button events.
 document.querySelector("#refreshButton")
   .addEventListener("click", loadGraph);
 
+setupGraphNavigation();
 loadGraph();
