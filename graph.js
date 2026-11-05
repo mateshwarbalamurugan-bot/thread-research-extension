@@ -9,6 +9,25 @@ const searchInput = document.querySelector("#graphSearch");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+const NODE_WIDTH = 250;
+const NODE_HEIGHT = 112;
+const HORIZONTAL_GAP = 190;
+const VERTICAL_GAP = 175;
+
+const relationshipColors = {
+  supports: "#42d6a4",
+  contradicts: "#ff718b",
+  related: "#65b7ff"
+};
+
+const nodeColors = [
+  "#42d6a4",
+  "#65b7ff",
+  "#b28aff",
+  "#ffbd69",
+  "#ff718b"
+];
+
 let zoomLevel = 1;
 let panX = 0;
 let panY = 0;
@@ -17,11 +36,21 @@ let lastPointerX = 0;
 let lastPointerY = 0;
 let graphViewport = null;
 
-const colors = {
-  supports: "#70d9a5",
-  contradicts: "#ff7777",
-  related: "#75aaff"
-};
+function getFindingTitle(finding) {
+  return finding.sourceTitle || finding.title || "Untitled page";
+}
+
+function getFindingText(finding) {
+  return finding.text || finding.quote || finding.content || "";
+}
+
+function getFindingUrl(finding) {
+  return finding.sourceUrl || finding.url || "";
+}
+
+function getFindingDate(finding) {
+  return finding.capturedAt || finding.createdAt || "";
+}
 
 function svgElement(tag, attributes = {}) {
   const element = document.createElementNS(SVG_NS, tag);
@@ -33,358 +62,292 @@ function svgElement(tag, attributes = {}) {
   return element;
 }
 
-function showDetails(finding) {
-  details.replaceChildren();
-
-  const label = document.createElement("p");
-  label.className = "eyebrow";
-  label.textContent = "SELECTED FINDING";
-
-  const heading = document.createElement("h2");
-  heading.textContent = finding.sourceTitle || "Untitled source";
-
-  const quote = document.createElement("p");
-  quote.textContent = finding.text || "No text available.";
-
-  details.append(label, heading, quote);
-
-  if (finding.sourceUrl) {
-    const url = document.createElement("a");
-    url.textContent = "Open original source";
-    url.href = finding.sourceUrl;
-    url.target = "_blank";
-    url.rel = "noopener noreferrer";
-    details.append(url);
-  }
-}
-
-function wrapText(text, maxLength = 21, maxLines = 3) {
-  const words = (text || "Untitled finding").split(/\s+/);
+function wrapText(value, maxLength = 29, maxLines = 3) {
+  const words = String(value || "Untitled page").split(/\s+/);
   const lines = [];
   let line = "";
+  let truncated = false;
 
-  words.forEach(word => {
-    while (word.length > maxLength) {
-      if (line) {
-        lines.push(line);
-        line = "";
-      }
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
 
-      lines.push(word.slice(0, maxLength));
-      word = word.slice(maxLength);
-    }
-
-    const next = line ? `${line} ${word}` : word;
-
-    if (next.length > maxLength && line) {
+    if (candidate.length > maxLength && line) {
       lines.push(line);
       line = word;
     } else {
-      line = next;
+      line = candidate;
     }
-  });
 
-  if (line) lines.push(line);
+    if (lines.length === maxLines) {
+      truncated = true;
+      break;
+    }
+  }
 
-  if (lines.length > maxLines) {
-    lines.length = maxLines;
-    lines[maxLines - 1] =
-      lines[maxLines - 1].slice(0, maxLength - 3) + "...";
+  if (line && lines.length < maxLines) {
+    lines.push(line);
+  }
+
+  if (truncated && lines.length) {
+    const last = lines.length - 1;
+    lines[last] = lines[last].replace(/[.,;:]?$/, "") + "...";
   }
 
   return lines;
 }
 
-function addTextLine(group, text, position, index) {
-  const line = svgElement("text", {
-    x: position.x + 12,
-    y: position.y + 30 + index * 19
+function addTextLine(group, text, x, y, className) {
+  const element = svgElement("text", {
+    x,
+    y,
+    class: className
   });
 
-  line.textContent = text;
-  group.append(line);
+  element.textContent = text;
+  group.appendChild(element);
+
+  return element;
 }
 
-// Smart force-directed node layout.
-function calculateSmartLayout(
-  findings,
-  relationships,
-  nodeWidth,
-  nodeHeight,
-  width,
-  height
-) {
-  const count = findings.length;
+function showDetails(finding) {
+  if (!details) return;
 
-  const positions = findings.map((finding, index) => {
-    const columns = Math.min(3, count);
-    const column = index % columns;
-    const row = Math.floor(index / columns);
+  details.replaceChildren();
 
-    return {
-      id: finding.id,
-      x: 60 + column * 355 + nodeWidth / 2,
-      y: 50 + row * 250 + nodeHeight / 2,
-      originalX: 60 + column * 355 + nodeWidth / 2,
-      originalY: 50 + row * 250 + nodeHeight / 2,
-      vx: 0,
-      vy: 0
-    };
-  });
+  const label = document.createElement("p");
+  label.className = "eyebrow";
+  label.textContent = "SELECTED EVIDENCE";
 
-  const indexMap = new Map(
-    positions.map((position, index) => [position.id, index])
+  const heading = document.createElement("h2");
+  heading.textContent = getFindingTitle(finding);
+
+  const quote = document.createElement("p");
+  quote.className = "detail-quote";
+  quote.textContent =
+    getFindingText(finding) || "No evidence text available.";
+
+  details.append(label, heading, quote);
+
+  const sourceUrl = getFindingUrl(finding);
+
+  if (sourceUrl) {
+    try {
+      const url = new URL(sourceUrl);
+
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        const link = document.createElement("a");
+        link.href = url.href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Open original source";
+        details.appendChild(link);
+      }
+    } catch {
+      console.warn("Invalid source URL:", sourceUrl);
+    }
+  }
+
+  const capturedAt = getFindingDate(finding);
+
+  if (capturedAt) {
+    const date = document.createElement("p");
+    date.className = "detail-meta";
+    date.textContent =
+      `Captured: ${new Date(capturedAt).toLocaleString()}`;
+    details.appendChild(date);
+  }
+}
+
+function calculateSmartLayout(findings, relationships) {
+  const adjacency = new Map(
+    findings.map(finding => [finding.id, new Set()])
   );
 
-  const links = relationships
-    .map(link => ({
-      source: indexMap.get(link.sourceId),
-      target: indexMap.get(link.targetId)
-    }))
-    .filter(link =>
-      link.source !== undefined &&
-      link.target !== undefined &&
-      link.source !== link.target
-    );
+  relationships.forEach(link => {
+    if (
+      adjacency.has(link.sourceId) &&
+      adjacency.has(link.targetId)
+    ) {
+      adjacency.get(link.sourceId).add(link.targetId);
+      adjacency.get(link.targetId).add(link.sourceId);
+    }
+  });
 
-  for (let iteration = 0; iteration < 180; iteration++) {
-    const forces = positions.map(() => ({ x: 0, y: 0 }));
+  const visited = new Set();
+  const components = [];
 
-    // Push overlapping nodes apart.
-    for (let i = 0; i < count; i++) {
-      for (let j = i + 1; j < count; j++) {
-        const a = positions[i];
-        const b = positions[j];
+  for (const finding of findings) {
+    if (visited.has(finding.id)) continue;
 
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
+    const queue = [finding.id];
+    const component = [];
 
-        const overlapX = nodeWidth + 35 - Math.abs(dx);
-        const overlapY = nodeHeight + 35 - Math.abs(dy);
+    visited.add(finding.id);
 
-        if (overlapX > 0 && overlapY > 0) {
-          if (overlapX < overlapY) {
-            const push = overlapX * 0.08 * (dx >= 0 ? 1 : -1);
-            forces[i].x -= push;
-            forces[j].x += push;
-          } else {
-            const push = overlapY * 0.08 * (dy >= 0 ? 1 : -1);
-            forces[i].y -= push;
-            forces[j].y += push;
-          }
+    while (queue.length) {
+      const current = queue.shift();
+      component.push(current);
+
+      for (const neighbour of adjacency.get(current) || []) {
+        if (!visited.has(neighbour)) {
+          visited.add(neighbour);
+          queue.push(neighbour);
         }
       }
     }
 
-    // Pull connected findings towards each other.
-    links.forEach(link => {
-      const a = positions[link.source];
-      const b = positions[link.target];
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const distance = Math.hypot(dx, dy) || 1;
-
-      const targetDistance = 390;
-
-      if (distance > targetDistance) {
-        const force = (distance - targetDistance) * 0.002;
-
-        const fx = (dx / distance) * force;
-        const fy = (dy / distance) * force;
-
-        forces[link.source].x += fx;
-        forces[link.source].y += fy;
-
-        forces[link.target].x -= fx;
-        forces[link.target].y -= fy;
-      }
-    });
-
-    // Keep layout stable.
-    positions.forEach((position, index) => {
-      forces[index].x += (position.originalX - position.x) * 0.001;
-      forces[index].y += (position.originalY - position.y) * 0.001;
-
-      position.vx = (position.vx + forces[index].x) * 0.75;
-      position.vy = (position.vy + forces[index].y) * 0.75;
-
-      position.x += position.vx;
-      position.y += position.vy;
-
-      position.x = Math.max(
-        nodeWidth / 2 + 30,
-        Math.min(width - nodeWidth / 2 - 30, position.x)
-      );
-
-      position.y = Math.max(
-        nodeHeight / 2 + 30,
-        Math.min(height - nodeHeight / 2 - 30, position.y)
-      );
-    });
+    components.push(component);
   }
 
-  return new Map(
-    positions.map(position => [
-      position.id,
-      {
-        x: position.x - nodeWidth / 2,
-        y: position.y - nodeHeight / 2
-      }
-    ])
-  );
+  components.sort((a, b) => b.length - a.length);
+
+  const positions = new Map();
+  const maxBlockWidth = 1900;
+  const componentGap = 170;
+
+  let cursorX = 100;
+  let cursorY = 100;
+  let rowHeight = 0;
+
+  components.forEach(component => {
+    const columns = Math.min(3, component.length);
+    const rows = Math.ceil(component.length / columns);
+
+    const blockWidth =
+      columns * (NODE_WIDTH + HORIZONTAL_GAP) - HORIZONTAL_GAP;
+
+    const blockHeight =
+      rows * (NODE_HEIGHT + VERTICAL_GAP) - VERTICAL_GAP;
+
+    if (
+      cursorX > 100 &&
+      cursorX + blockWidth > maxBlockWidth
+    ) {
+      cursorX = 100;
+      cursorY += rowHeight + componentGap;
+      rowHeight = 0;
+    }
+
+    component.forEach((id, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+
+      positions.set(id, {
+        x: cursorX + column * (NODE_WIDTH + HORIZONTAL_GAP),
+        y: cursorY + row * (NODE_HEIGHT + VERTICAL_GAP)
+      });
+    });
+
+    cursorX += blockWidth + componentGap;
+    rowHeight = Math.max(rowHeight, blockHeight);
+  });
+
+  let width = 1200;
+  let height = 700;
+
+  positions.forEach(position => {
+    width = Math.max(width, position.x + NODE_WIDTH + 100);
+    height = Math.max(height, position.y + NODE_HEIGHT + 100);
+  });
+
+  return { positions, width, height };
 }
 
-// Find a relationship label position away from nodes and other labels.
+function getEdgePoints(source, target) {
+  const sourceCenterX = source.x + NODE_WIDTH / 2;
+  const sourceCenterY = source.y + NODE_HEIGHT / 2;
+  const targetCenterX = target.x + NODE_WIDTH / 2;
+  const targetCenterY = target.y + NODE_HEIGHT / 2;
+
+  const dx = targetCenterX - sourceCenterX;
+  const dy = targetCenterY - sourceCenterY;
+
+  if (dx === 0 && dy === 0) return null;
+
+  const scale = Math.min(
+    (NODE_WIDTH / 2) / Math.max(Math.abs(dx), 0.001),
+    (NODE_HEIGHT / 2) / Math.max(Math.abs(dy), 0.001)
+  );
+
+  return {
+    x1: sourceCenterX + dx * scale,
+    y1: sourceCenterY + dy * scale,
+    x2: targetCenterX - dx * scale,
+    y2: targetCenterY - dy * scale
+  };
+}
+
 function findLabelPosition(
   x1,
   y1,
   x2,
   y2,
-  controlX,
-  controlY,
-  labelText,
-  positions,
-  nodeWidth,
-  nodeHeight,
-  placedLabels,
-  width,
-  height
+  offset,
+  labelWidth,
+  placedLabels
 ) {
-  const labelWidth = labelText.length * 8 + 18;
-  const labelHeight = 24;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.max(Math.hypot(dx, dy), 1);
 
-  const candidates = [];
-  const offsets = [45, -45, 65, -65, 90, -90, 120, -120, 155, -155];
-  const points = [0.25, 0.35, 0.45, 0.5, 0.55, 0.65, 0.75];
+  const normalX = -dy / length;
+  const normalY = dx / length;
 
-  points.forEach(t => {
-    const inverse = 1 - t;
+  const candidates = [
+    65, -65, 95, -95, 130, -130, 165, -165
+  ];
 
-    const pointX =
-      inverse * inverse * x1 +
-      2 * inverse * t * controlX +
-      t * t * x2;
+  for (const distance of candidates) {
+    const x =
+      (x1 + x2) / 2 + normalX * (distance + offset);
 
-    const pointY =
-      inverse * inverse * y1 +
-      2 * inverse * t * controlY +
-      t * t * y2;
+    const y =
+      (y1 + y2) / 2 + normalY * (distance + offset);
 
-    const tangentX =
-      2 * inverse * (controlX - x1) +
-      2 * t * (x2 - controlX);
-
-    const tangentY =
-      2 * inverse * (controlY - y1) +
-      2 * t * (y2 - controlY);
-
-    const tangentLength =
-      Math.hypot(tangentX, tangentY) || 1;
-
-    const normalX = -tangentY / tangentLength;
-    const normalY = tangentX / tangentLength;
-
-    offsets.forEach(offset => {
-      candidates.push({
-        x: pointX + normalX * offset,
-        y: pointY + normalY * offset,
-        offset,
-        t
-      });
-    });
-  });
-
-  let bestPosition = candidates[0];
-  let lowestScore = Infinity;
-
-  candidates.forEach(candidate => {
-    const left = candidate.x - labelWidth / 2;
-    const right = candidate.x + labelWidth / 2;
-    const top = candidate.y - labelHeight / 2;
-    const bottom = candidate.y + labelHeight / 2;
-
-    let score = Math.abs(candidate.offset) * 0.15;
-    score += Math.abs(candidate.t - 0.5) * 20;
-
-    if (left < 15 || right > width - 15) score += 100000;
-    if (top < 15 || bottom > height - 15) score += 100000;
-
-    positions.forEach(position => {
-      const nodeLeft = position.x - 10;
-      const nodeRight = position.x + nodeWidth + 10;
-      const nodeTop = position.y - 10;
-      const nodeBottom = position.y + nodeHeight + 10;
-
-      const overlapX = Math.max(
-        0,
-        Math.min(right, nodeRight) - Math.max(left, nodeLeft)
+    const overlaps = placedLabels.some(label => {
+      return (
+        Math.abs(label.x - x) < (labelWidth + 35) / 2 &&
+        Math.abs(label.y - y) < 34
       );
-
-      const overlapY = Math.max(
-        0,
-        Math.min(bottom, nodeBottom) - Math.max(top, nodeTop)
-      );
-
-      score += overlapX * overlapY * 1000;
     });
 
-    placedLabels.forEach(previous => {
-      const overlapX = Math.max(
-        0,
-        Math.min(right, previous.right) -
-        Math.max(left, previous.left)
-      );
-
-      const overlapY = Math.max(
-        0,
-        Math.min(bottom, previous.bottom) -
-        Math.max(top, previous.top)
-      );
-
-      score += overlapX * overlapY * 1500;
-    });
-
-    if (score < lowestScore) {
-      lowestScore = score;
-      bestPosition = candidate;
+    if (!overlaps) {
+      placedLabels.push({ x, y });
+      return { x, y };
     }
-  });
+  }
 
-  return {
-    x: bestPosition.x,
-    y: bestPosition.y,
-    left: bestPosition.x - labelWidth / 2,
-    right: bestPosition.x + labelWidth / 2,
-    top: bestPosition.y - labelHeight / 2,
-    bottom: bestPosition.y + labelHeight / 2
+  const fallback = {
+    x: (x1 + x2) / 2 + normalX * 190,
+    y: (y1 + y2) / 2 + normalY * 190
   };
+
+  placedLabels.push(fallback);
+  return fallback;
 }
 
-// Apply live search to the graph.
 function applyGraphSearch(query) {
-  const searchTerm = query.trim().toLowerCase();
+  if (!graphViewport) return;
 
-  const nodes = [...svg.querySelectorAll(".node")];
-  const edges = [...svg.querySelectorAll(".edge")];
-  const labels = [...svg.querySelectorAll(".edge-label")];
+  const term = query.trim().toLowerCase();
+
+  const nodes = graphViewport.querySelectorAll(".node");
+  const edges = graphViewport.querySelectorAll(".edge");
+  const labels = graphViewport.querySelectorAll(".edge-label");
 
   const matchingIds = new Set();
 
   nodes.forEach(node => {
     const matches =
-      searchTerm !== "" &&
-      node.dataset.searchText.includes(searchTerm);
+      term &&
+      node.dataset.searchText.includes(term);
 
     if (matches) {
       matchingIds.add(node.dataset.findingId);
     }
 
-    node.classList.toggle("search-match", matches);
-    node.classList.toggle(
-      "search-dim",
-      searchTerm !== "" && !matches
-    );
+    node.classList.toggle("search-match", Boolean(matches));
+    node.classList.toggle("search-dim", Boolean(term && !matches));
   });
 
   [...edges, ...labels].forEach(element => {
@@ -393,13 +356,13 @@ function applyGraphSearch(query) {
       matchingIds.has(element.dataset.targetId);
 
     element.classList.toggle(
-      "search-match",
-      searchTerm !== "" && connected
+      "search-dim",
+      Boolean(term && !connected)
     );
 
     element.classList.toggle(
-      "search-dim",
-      searchTerm !== "" && !connected
+      "search-match",
+      Boolean(term && connected)
     );
   });
 }
@@ -421,43 +384,45 @@ function resetGraphView() {
 }
 
 function zoomGraph(factor) {
+  if (!graphViewport) return;
+
   const previousZoom = zoomLevel;
 
-  zoomLevel = Math.max(
-    0.4,
-    Math.min(2.5, zoomLevel * factor)
+  zoomLevel = Math.min(
+    2.5,
+    Math.max(0.4, zoomLevel * factor)
   );
 
-  const viewBox = svg.viewBox.baseVal;
-  const centerX = viewBox.width / 2;
-  const centerY = viewBox.height / 2;
+  const bounds = svg.getBoundingClientRect();
 
-  const scaleFactor = zoomLevel / previousZoom;
+  const scaleX = Number(svg.viewBox.baseVal.width) / bounds.width;
+  const scaleY = Number(svg.viewBox.baseVal.height) / bounds.height;
 
-  panX = centerX - (centerX - panX) * scaleFactor;
-  panY = centerY - (centerY - panY) * scaleFactor;
+  const pointX = bounds.width / 2 * scaleX;
+  const pointY = bounds.height / 2 * scaleY;
+
+  panX = pointX - (pointX - panX) * (zoomLevel / previousZoom);
+  panY = pointY - (pointY - panY) * (zoomLevel / previousZoom);
 
   updateGraphTransform();
 }
 
 function setupGraphNavigation() {
-  document.querySelector("#zoomIn").addEventListener(
-    "click",
-    () => zoomGraph(1.2)
-  );
+  document.querySelector("#zoomIn")?.addEventListener("click", () => {
+    zoomGraph(1.2);
+  });
 
-  document.querySelector("#zoomOut").addEventListener(
-    "click",
-    () => zoomGraph(1 / 1.2)
-  );
+  document.querySelector("#zoomOut")?.addEventListener("click", () => {
+    zoomGraph(1 / 1.2);
+  });
 
-  document.querySelector("#resetView").addEventListener(
+  document.querySelector("#resetView")?.addEventListener(
     "click",
     resetGraphView
   );
 
   svg.addEventListener("pointerdown", event => {
-    if (event.target.closest(".node")) return;
+    if (event.target.closest?.(".node")) return;
 
     isDragging = true;
     lastPointerX = event.clientX;
@@ -470,14 +435,16 @@ function setupGraphNavigation() {
   svg.addEventListener("pointermove", event => {
     if (!isDragging) return;
 
-    const rect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox.baseVal;
+    const bounds = svg.getBoundingClientRect();
 
-    const scaleX = viewBox.width / rect.width;
-    const scaleY = viewBox.height / rect.height;
+    const scaleX = Number(svg.viewBox.baseVal.width) / bounds.width;
+    const scaleY = Number(svg.viewBox.baseVal.height) / bounds.height;
 
-    panX += (event.clientX - lastPointerX) * scaleX;
-    panY += (event.clientY - lastPointerY) * scaleY;
+    panX +=
+      ((event.clientX - lastPointerX) * scaleX) / zoomLevel;
+
+    panY +=
+      ((event.clientY - lastPointerY) * scaleY) / zoomLevel;
 
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
@@ -497,169 +464,174 @@ function setupGraphNavigation() {
 
 function renderGraph(findings, relationships) {
   svg.replaceChildren();
-  graphViewport = null;
 
   if (!findings.length) {
     empty.hidden = false;
-    svg.setAttribute("viewBox", "0 0 1100 600");
+    svg.hidden = true;
+    graphViewport = null;
     return;
   }
 
   empty.hidden = true;
+  svg.hidden = false;
 
-  const nodeWidth = 210;
-  const nodeHeight = 100;
-  const columns = Math.min(3, findings.length);
-  const rows = Math.ceil(findings.length / columns);
+  const layout = calculateSmartLayout(findings, relationships);
 
-  const width = Math.max(
-    1100,
-    columns * (nodeWidth + 145) + 100
+  svg.setAttribute(
+    "viewBox",
+    `0 0 ${layout.width} ${layout.height}`
   );
 
-  const height = Math.max(
-    600,
-    rows * (nodeHeight + 150) + 150
-  );
-
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.setAttribute("height", height);
+  svg.setAttribute("width", layout.width);
+  svg.setAttribute("height", layout.height);
 
   graphViewport = svgElement("g", {
     id: "graphViewport"
   });
 
-  svg.append(graphViewport);
+  svg.appendChild(graphViewport);
 
-  const positions = calculateSmartLayout(
-    findings,
-    relationships,
-    nodeWidth,
-    nodeHeight,
-    width,
-    height
-  );
-
-  // Count connections between each pair.
+  const placedLabels = [];
   const pairCounts = new Map();
 
   relationships.forEach(link => {
     const key = [link.sourceId, link.targetId].sort().join("|");
+
     pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
   });
 
   const pairIndexes = new Map();
-  const placedLabels = [];
 
-  // Draw relationship lines and labels.
   relationships.forEach(link => {
-    const source = positions.get(link.sourceId);
-    const target = positions.get(link.targetId);
+    const source = layout.positions.get(link.sourceId);
+    const target = layout.positions.get(link.targetId);
 
     if (!source || !target) return;
 
-    const x1 = source.x + nodeWidth / 2;
-    const y1 = source.y + nodeHeight / 2;
-    const x2 = target.x + nodeWidth / 2;
-    const y2 = target.y + nodeHeight / 2;
+    const points = getEdgePoints(source, target);
+    if (!points) return;
 
     const key = [link.sourceId, link.targetId].sort().join("|");
-    const total = pairCounts.get(key);
-    const index = pairIndexes.get(key) || 0;
 
+    const index = pairIndexes.get(key) || 0;
     pairIndexes.set(key, index + 1);
 
+    const total = pairCounts.get(key) || 1;
     const offset = (index - (total - 1) / 2) * 55;
 
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
+    const centerX = (points.x1 + points.x2) / 2;
+    const centerY = (points.y1 + points.y2) / 2;
 
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const length = Math.hypot(dx, dy) || 1;
+    const dx = points.x2 - points.x1;
+    const dy = points.y2 - points.y1;
+    const length = Math.max(Math.hypot(dx, dy), 1);
 
-    const controlX = midX - (dy / length) * offset;
-    const controlY = midY + (dx / length) * offset;
+    const curveX = centerX - (dy / length) * offset;
+    const curveY = centerY + (dx / length) * offset;
 
     const path = svgElement("path", {
-      d: `M ${x1} ${y1} Q ${controlX} ${controlY} ${x2} ${y2}`,
-      fill: "none",
-      stroke: colors[link.type] || colors.related,
-      "stroke-width": 2.5,
-      class: "edge"
+      d: `M ${points.x1} ${points.y1} Q ${curveX} ${curveY} ${points.x2} ${points.y2}`,
+      class: "edge",
+      stroke: relationshipColors[link.type] || relationshipColors.related,
+      "data-source-id": link.sourceId,
+      "data-target-id": link.targetId
     });
 
-    path.dataset.sourceId = String(link.sourceId);
-    path.dataset.targetId = String(link.targetId);
+    graphViewport.appendChild(path);
 
-    graphViewport.append(path);
-
-    const labelText = link.type.toUpperCase();
+    const labelText = link.type || "related";
+    const labelWidth = labelText.length * 8 + 30;
 
     const labelPosition = findLabelPosition(
-      x1,
-      y1,
-      x2,
-      y2,
-      controlX,
-      controlY,
-      labelText,
-      positions,
-      nodeWidth,
-      nodeHeight,
-      placedLabels,
-      width,
-      height
+      points.x1,
+      points.y1,
+      points.x2,
+      points.y2,
+      offset,
+      labelWidth,
+      placedLabels
     );
-
-    placedLabels.push(labelPosition);
 
     const label = svgElement("text", {
       x: labelPosition.x,
-      y: labelPosition.y + 4,
+      y: labelPosition.y,
       class: "edge-label",
-      "text-anchor": "middle"
+      "text-anchor": "middle",
+      "data-source-id": link.sourceId,
+      "data-target-id": link.targetId
     });
 
     label.textContent = labelText;
-    label.dataset.sourceId = String(link.sourceId);
-    label.dataset.targetId = String(link.targetId);
+    label.style.fill =
+      relationshipColors[link.type] || relationshipColors.related;
 
-    graphViewport.append(label);
+    graphViewport.appendChild(label);
   });
 
-  // Draw finding cards.
-  findings.forEach(finding => {
-    const position = positions.get(finding.id);
+  findings.forEach((finding, index) => {
+    const position = layout.positions.get(finding.id);
+    if (!position) return;
+
+    const title = getFindingTitle(finding);
+    const evidenceText = getFindingText(finding);
+    const sourceUrl = getFindingUrl(finding);
 
     const group = svgElement("g", {
-      class: "node",
+      class: `node node-color-${index % nodeColors.length}`,
+      transform: `translate(${position.x} ${position.y})`,
       tabindex: "0",
       role: "button",
-      "aria-label": finding.text || "Untitled finding"
+      "aria-label": `Open finding: ${title}`,
+      "data-finding-id": finding.id,
+      "data-search-text": [
+        title,
+        evidenceText,
+        sourceUrl
+      ].filter(Boolean).join(" ").toLowerCase()
     });
 
-    group.dataset.findingId = String(finding.id);
-    group.dataset.searchText = (
-      (finding.sourceTitle || "") + " " +
-      (finding.text || "")
-    ).toLowerCase();
-
-    const rectangle = svgElement("rect", {
-      x: position.x,
-      y: position.y,
-      width: nodeWidth,
-      height: nodeHeight,
-      rx: 12
+    const rect = svgElement("rect", {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      rx: 17,
+      ry: 17
     });
 
-    group.append(rectangle);
+    group.appendChild(rect);
 
-    wrapText(finding.text).forEach((text, index) => {
-      addTextLine(group, text, position, index);
+    const lines = wrapText(title);
+
+    lines.forEach((line, lineIndex) => {
+      addTextLine(
+        group,
+        line,
+        20,
+        37 + lineIndex * 22,
+        "node-title"
+      );
     });
 
-    group.addEventListener("click", () => showDetails(finding));
+    let sourceText = "Saved evidence";
+
+    if (sourceUrl) {
+      try {
+        sourceText = new URL(sourceUrl).hostname.replace(/^www\./, "");
+      } catch {
+        sourceText = "Saved evidence";
+      }
+    }
+
+    addTextLine(
+      group,
+      sourceText,
+      20,
+      NODE_HEIGHT - 17,
+      "node-source"
+    );
+
+    group.addEventListener("click", () => {
+      showDetails(finding);
+    });
 
     group.addEventListener("keydown", event => {
       if (event.key === "Enter" || event.key === " ") {
@@ -668,12 +640,11 @@ function renderGraph(findings, relationships) {
       }
     });
 
-    graphViewport.append(group);
+    graphViewport.appendChild(group);
   });
 
   resetGraphView();
 
-  // Restore search if the user refreshes the graph.
   if (searchInput) {
     applyGraphSearch(searchInput.value);
   }
@@ -683,43 +654,57 @@ async function loadGraph() {
   try {
     const workspace = await ensureWorkspace();
 
+    // Relationships are stored separately from ensureWorkspace().
+    const storedData = await chrome.storage.local.get({
+      relationships: []
+    });
+
+    const activeProjectId = workspace.activeProjectId;
+
     const activeProject = workspace.projects.find(
-      project => project.id === workspace.activeProjectId
+      project => project.id === activeProjectId
     );
 
-    projectName.textContent = activeProject
-      ? activeProject.name
-      : "Research project";
+    if (projectName) {
+      projectName.textContent =
+        activeProject?.name || "My Research";
+    }
 
     const findings = workspace.findings.filter(
-      finding => finding.projectId === workspace.activeProjectId
+      finding => finding.projectId === activeProjectId
     );
 
-    const { relationships = [] } =
-      await chrome.storage.local.get({ relationships: [] });
-
-    const projectRelationships = relationships.filter(
-      link => link.projectId === workspace.activeProjectId
+    const findingIds = new Set(
+      findings.map(finding => finding.id)
     );
 
-    renderGraph(findings, projectRelationships);
+    const relationships = storedData.relationships.filter(
+      link =>
+        findingIds.has(link.sourceId) &&
+        findingIds.has(link.targetId)
+    );
+
+    renderGraph(findings, relationships);
+
   } catch (error) {
     console.error("Unable to load THREAD graph:", error);
-    projectName.textContent = "Unable to load project";
+
+    empty.hidden = false;
+    empty.textContent =
+      "Unable to load the graph. Check the extension console.";
+
+    svg.hidden = true;
   }
 }
 
-// Button events.
-document.querySelector("#refreshButton")
-  .addEventListener("click", loadGraph);
+document.querySelector("#refreshButton")?.addEventListener(
+  "click",
+  loadGraph
+);
+
+searchInput?.addEventListener("input", event => {
+  applyGraphSearch(event.target.value);
+});
 
 setupGraphNavigation();
-
-// Live search.
-if (searchInput) {
-  searchInput.addEventListener("input", event => {
-    applyGraphSearch(event.target.value);
-  });
-}
-
 loadGraph();
