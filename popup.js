@@ -19,6 +19,7 @@ const sourceSelect = document.querySelector("#sourceFinding");
 const targetSelect = document.querySelector("#targetFinding");
 const relationshipList = document.querySelector("#relationships");
 const noRelationships = document.querySelector("#noRelationships");
+const graphButton = document.querySelector("#openGraph");
 
 async function render() {
   const workspace = await ensureWorkspace();
@@ -205,5 +206,9 @@ clearButton.addEventListener("click", async () => {
 
   render();
 });
-
+graphButton.addEventListener("click", () => {
+  chrome.tabs.create({
+    url: chrome.runtime.getURL("graph.html")
+  });
+});
 render();
