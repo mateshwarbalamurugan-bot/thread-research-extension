@@ -1,0 +1,148 @@
+* { box-sizing: border-box; }
+body {
+  width: 360px; min-height: 300px; margin: 0; padding: 20px;
+  background: #0b1012; color: #e8f0ed;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+header { border-bottom: 1px solid #263438; padding-bottom: 16px; }
+.eyebrow { color: #70d9a5; font-size: 10px; letter-spacing: 1.8px; }
+h1 { margin: 4px 0 0; font-size: 28px; letter-spacing: 3px; }
+header p { margin: 0; color: #9aadaa; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+h2 { margin: 0; font-size: 15px; }
+#count { color: #70d9a5; font-variant-numeric: tabular-nums; }
+.empty { color: #9aadaa; font-size: 12px; }
+ul { list-style: none; margin: 12px 0; padding: 0; }
+.finding { padding: 12px 0; border-bottom: 1px solid #263438; }
+.finding p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.source { color: #9aadaa; font-size: 11px; }
+.actions { display: flex; gap: 8px; margin-top: 8px; }
+button { cursor: pointer; border: 1px solid #38534a; border-radius: 5px; padding: 6px 9px; background: #14231e; color: #baf4d5; }
+button:hover { background: #1b342a; }
+.clear-button { margin-top: 8px; color: #ffb7b7; border-color: #694040; background: #281919; }
+
+.project-controls {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+
+.project-controls select,
+.project-controls input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #38534a;
+  border-radius: 5px;
+  background: #14231e;
+  color: #e8f0ed;
+}
+
+#projectForm {
+  display: flex;
+  gap: 6px;
+}
+
+#projectForm input {
+  min-width: 0;
+  flex: 1;
+}
+
+.section-heading {
+  border-top: 1px solid #263438;
+  padding-top: 14px;
+}
+
+.relationships-section {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #263438;
+}
+
+.relationships-section form {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 20px;
+}
+
+.relationships-section label {
+  color: #9aadaa;
+  font-size: 12px;
+}
+
+.relationships-section select {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #38534a;
+  border-radius: 5px;
+  background: #14231e;
+  color: #e8f0ed;
+}
+
+.relationships-section button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.relationships-section h2 {
+  margin: 14px 0 8px;
+}
+/* Layout and text overflow fixes */
+body {
+  width: 380px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+main,
+header,
+.finding,
+.relationships-section {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.finding p,
+.source,
+#relationships li,
+#findings li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.project-controls,
+.relationships-section form {
+  min-width: 0;
+}
+
+.project-controls select,
+.project-controls input,
+.relationships-section select {
+  width: 100%;
+  min-width: 0;
+}
+
+button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.actions {
+  flex-wrap: wrap;
+}
+#openGraph {
+  width: 100%;
+  margin-bottom: 10px;
+  display: block;
+}
+
+#clearProject {
+  width: 100%;
+  display: block;
+  margin-top: 8px;
+}
+
+button {
+  box-sizing: border-box;
+  white-space: normal;
+  line-height: 1.4;
+}

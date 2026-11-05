@@ -1,0 +1,78 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>THREAD</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">VISUAL EVIDENCE MAPPING</div>
+    <h1>THREAD</h1>
+    <p>Collect evidence. Connect ideas.</p>
+  </header>
+
+  <main>
+    <h2>Research projects</h2>
+
+    <div class="project-controls">
+      <select id="projectSelect"></select>
+      <form id="projectForm">
+        <input id="projectName" placeholder="New project name" required>
+        <button type="submit">Create</button>
+      </form>
+    </div>
+
+    <div class="section-heading">
+      <h2>Saved findings</h2>
+      <span id="count">0</span>
+    </div>
+
+    <p id="empty" class="empty">
+      No findings in this project yet.
+    </p>
+
+    <ul id="findings" aria-live="polite"></ul>
+    
+<section class="relationships-section">
+  <div class="section-heading">
+    <h2>Connect evidence</h2>
+  </div>
+
+  <form id="relationshipForm">
+    <label for="sourceFinding">From finding</label>
+    <select id="sourceFinding" required></select>
+
+    <label for="targetFinding">To finding</label>
+    <select id="targetFinding" required></select>
+
+    <label for="relationshipType">Relationship</label>
+    <select id="relationshipType">
+      <option value="supports">Supports</option>
+      <option value="contradicts">Contradicts</option>
+      <option value="related">Related To</option>
+    </select>
+
+    <button type="submit">Create connection</button>
+  </form>
+
+  <h2>Evidence connections</h2>
+  <p id="noRelationships" class="empty">
+    No connections yet.
+  </p>
+  <ul id="relationships"></ul>
+</section>
+
+  <button id="openGraph" type="button">
+  Open visual knowledge graph
+</button>
+
+<button id="clear" class="clear-button" type="button">
+  Clear project findings
+</button>
+  </main>
+</body>
+</html>
